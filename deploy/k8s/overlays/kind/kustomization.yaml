@@ -1,0 +1,86 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Local kind overlay: everything runs from images loaded with
+# `kind load docker-image`, so nothing should ever be pulled from a registry,
+# and requests are tiny to fit a laptop / a memory-constrained box.
+resources:
+  - ../../base
+
+# Image tags are overridable here. In kind the images are side-loaded under
+# these exact names, so this is a no-op pin today and the knob to retag later.
+images:
+  - name: ghcr.io/jjsanda/adaptive-otelcol
+    newTag: latest
+  - name: adaptive-pricing
+    newTag: latest
+
+patches:
+  # Gateway: never pull (placeholder distro image only exists after kind load),
+  # single replica, tiny footprint.
+  - target:
+      group: opentelemetry.io
+      version: v1beta1
+      kind: OpenTelemetryCollector
+      name: gateway
+    patch: |
+      apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
+      metadata:
+        name: gateway
+        namespace: observability
+      spec:
+        imagePullPolicy: Never
+        replicas: 1
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+
+  # Agent DaemonSet: never pull, tiny footprint.
+  - target:
+      group: opentelemetry.io
+      version: v1beta1
+      kind: OpenTelemetryCollector
+      name: agent
+    patch: |
+      apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
+      metadata:
+        name: agent
+        namespace: apps
+      spec:
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+
+  # Demo app: use the locally loaded image if present, small requests.
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: pricing
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pricing
+        namespace: apps
+      spec:
+        template:
+          spec:
+            containers:
+              - name: pricing
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 96Mi
+                  limits:
+                    memory: 192Mi

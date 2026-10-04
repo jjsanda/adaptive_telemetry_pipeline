@@ -1,0 +1,58 @@
+# OpenTelemetry Collector Builder (ocb) manifest for the adaptive-otelcol
+# distribution. Build with:  make collector  (runs from the repo root so the
+# per-entry `path: ./components` override resolves to the local module).
+#
+# Version policy (verified 2026-07-04):
+#   - core beta + contrib components: v0.155.0
+#   - core stable modules (confmap providers): v1.61.0
+#   - local custom components: one module, redirected to ./components via `path`.
+dist:
+  module: github.com/jjsanda/adaptive_telemetry_pipeline/collector
+  name: adaptive-otelcol
+  description: "Adaptive Telemetry Pipeline — custom OTel Collector distribution"
+  output_path: ./collector/_build
+  version: "0.1.0"
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.155.0
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.155.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.155.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor v0.155.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.155.0
+  # --- YOURS ---
+  - gomod: github.com/jjsanda/adaptive_telemetry_pipeline/components v0.1.0
+    import: github.com/jjsanda/adaptive_telemetry_pipeline/components/processor/resourcecostprocessor
+    name: resourcecost
+    path: ./components
+  - gomod: github.com/jjsanda/adaptive_telemetry_pipeline/components v0.1.0
+    import: github.com/jjsanda/adaptive_telemetry_pipeline/components/processor/anomalyprocessor
+    name: anomaly
+    path: ./components
+
+connectors:
+  - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.155.0
+  # --- YOURS ---
+  - gomod: github.com/jjsanda/adaptive_telemetry_pipeline/components v0.1.0
+    import: github.com/jjsanda/adaptive_telemetry_pipeline/components/connector/redmetricsconnector
+    name: redmetrics
+    path: ./components
+  - gomod: github.com/jjsanda/adaptive_telemetry_pipeline/components v0.1.0
+    import: github.com/jjsanda/adaptive_telemetry_pipeline/components/connector/llmtriageconnector
+    name: llmtriage
+    path: ./components
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.155.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.155.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.155.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.155.0
+
+extensions:
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.155.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.155.0
+
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.61.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.61.0

@@ -1,0 +1,11 @@
+go 1.25.0
+
+// Local multi-module workspace for development. The ocb-generated distribution
+// under collector/_build is intentionally NOT a member — it carries its own
+// generated go.mod + replace directives and is built with GOWORK=off.
+use (
+	./components
+	./services/shared
+	./services/order-api
+	./services/fulfillment-worker
+)

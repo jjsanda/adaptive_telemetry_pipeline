@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  components:
+    name: Components (test + race + coverage)
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Test components
+        run: go -C components test -race -cover ./...
+      - name: Vet Go services
+        run: |
+          go -C services/shared vet ./...
+          go -C services/order-api vet ./...
+          go -C services/fulfillment-worker vet ./...
+      - name: Build Go services
+        run: |
+          go -C services/order-api build ./...
+          go -C services/fulfillment-worker build ./...
+
+  collector:
+    name: Collector (ocb build + validate)
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Install ocb
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.155.0
+      - name: Build adaptive-otelcol
+        run: builder --config collector/builder-config.yaml
+      - name: Validate pipeline config
+        run: ./collector/_build/adaptive-otelcol validate --config collector/config/collector.yaml
+
+  node:
+    name: Node (inventory)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/inventory
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+
+  python:
+    name: Python (pricing)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/pricing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: pytest
+
+  manifests:
+    name: Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      - name: Validate manifests
+        run: bash scripts/k8s-validate.sh

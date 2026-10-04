@@ -1,0 +1,7 @@
+# Teaches kustomize's built-in `images:` transformer to also rewrite the
+# `spec.image` field of our OpenTelemetryCollector CRs (it only knows about
+# PodSpec container images out of the box). This is what lets the overlays pin
+# the distro image tag via `images:` instead of a bespoke patch.
+images:
+  - path: spec/image
+    kind: OpenTelemetryCollector

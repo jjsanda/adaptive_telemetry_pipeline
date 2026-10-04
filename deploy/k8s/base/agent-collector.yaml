@@ -1,0 +1,78 @@
+# Agent collector — a lean, per-node DaemonSet that receives OTLP from local
+# pods, enriches with k8s metadata, batches, and forwards to the gateway over
+# OTLP/gRPC. This is the classic agent+gateway topology: cheap fan-in at the
+# node, the expensive adaptive processing centralised on the gateway.
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: agent
+  namespace: apps
+spec:
+  mode: daemonset
+  image: ghcr.io/jjsanda/adaptive-otelcol:latest
+  serviceAccount: adaptive-collector
+  # Downward API: the node name scopes the k8sattributes pod cache to THIS node
+  # (filter.node_from_env_var below), so each agent lists only its own pods
+  # instead of every pod in the cluster — essential at DaemonSet scale.
+  env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        send_batch_size: 512
+        timeout: 5s
+      k8sattributes:
+        passthrough: false
+        auth_type: serviceAccount
+        filter:
+          node_from_env_var: KUBE_NODE_NAME
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.node.name
+            - k8s.deployment.name
+        pod_association:
+          - sources:
+              - from: connection
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+
+    exporters:
+      otlp:
+        endpoint: gateway-collector.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [otlp]
+        metrics:
+          receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [otlp]
+        logs:
+          receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [otlp]

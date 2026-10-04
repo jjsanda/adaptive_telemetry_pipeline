@@ -1,0 +1,38 @@
+{
+  "name": "inventory",
+  "version": "0.1.0",
+  "description": "Inventory microservice for the adaptive_telemetry_pipeline polyglot OpenTelemetry demo (Node.js + TypeScript).",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node --import ./dist/instrumentation.js dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint .",
+    "pretest": "npm run build",
+    "test": "node --test dist/*.test.js"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "0.78.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.220.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "0.220.0",
+    "@opentelemetry/resources": "2.9.0",
+    "@opentelemetry/sdk-metrics": "2.9.0",
+    "@opentelemetry/sdk-node": "0.220.0",
+    "@opentelemetry/semantic-conventions": "1.41.1",
+    "express": "5.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/express": "5.0.6",
+    "@types/node": "22.20.0",
+    "eslint": "10.6.0",
+    "tsx": "4.23.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.62.1"
+  }
+}

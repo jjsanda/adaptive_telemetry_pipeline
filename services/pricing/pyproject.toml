@@ -1,0 +1,17 @@
+# Tool configuration only -- the service runs from source via uvicorn, so there
+# is intentionally no [build-system]/[project]; dependencies live in requirements*.txt.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# .venv is excluded by ruff's defaults; listed here for clarity.
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+# Put the service root on sys.path so `import app.main` works without installing.
+pythonpath = ["."]

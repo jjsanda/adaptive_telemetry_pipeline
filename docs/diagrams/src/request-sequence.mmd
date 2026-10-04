@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant A as order-api (Go)
+    participant W as fulfillment-worker (Go)
+    participant I as inventory (Node)
+    participant P as pricing (Python)
+
+    U->>A: POST /orders
+    Note over A: create_order span<br/>chaos → W3C baggage
+    A->>W: POST /fulfill (traceparent + baggage)
+    par inventory check
+        W->>I: POST /check
+        I-->>W: { in_stock }
+    and price computation
+        W->>P: POST /price
+        Note over P: honors chaos baggage<br/>(slow / error)
+        P-->>W: { price_usd }
+    end
+    W-->>A: { price_usd, in_stock }
+    A-->>U: 200 { order_id, trace_id }

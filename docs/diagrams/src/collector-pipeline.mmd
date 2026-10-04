@@ -1,0 +1,38 @@
+flowchart LR
+    otlp(["OTLP receiver"])
+
+    subgraph traces["traces pipeline"]
+        t1["memory_limiter"] --> t2["resourcecost*"] --> t3["batch"]
+    end
+    subgraph metrics["metrics pipeline"]
+        m1["resourcecost*"] --> m2["anomaly*"] --> m3["batch"]
+    end
+    subgraph triage["metrics/triage pipeline"]
+        f1["filter<br/>keep anomalies"]
+    end
+    subgraph logs["logs pipeline"]
+        l1["resourcecost*"] --> l2["batch"]
+    end
+
+    jaeger[("Jaeger")]
+    prom[("Prometheus")]
+    loki[("Loki")]
+
+    otlp --> t1
+    otlp --> m1
+    otlp --> l1
+
+    t3 --> redmetrics["redmetrics*<br/>traces → metrics"]
+    redmetrics --> m1
+    t3 --> jaeger
+
+    m3 --> prom
+    m3 --> forward["forward"] --> f1
+    f1 --> llmtriage["llmtriage*<br/>metrics → logs"]
+    llmtriage --> loki
+    l2 --> loki
+
+    classDef custom fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#111;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,color:#111;
+    class t2,m1,m2,l1,redmetrics,llmtriage custom;
+    class jaeger,prom,loki backend;

@@ -1,0 +1,53 @@
+flowchart LR
+    user([User / load])
+
+    subgraph app["Order pipeline — polyglot demo app"]
+        direction TB
+        api["order-api<br/>(Go)"]
+        worker["fulfillment-worker<br/>(Go)"]
+        inv["inventory<br/>(Node)"]
+        price["pricing<br/>(Python)"]
+    end
+
+    subgraph col["adaptive-otelcol — custom Collector distribution"]
+        direction TB
+        recv["OTLP receiver"]
+        rc["resourcecost*<br/>owner + cost"]
+        red["redmetrics*<br/>traces → RED"]
+        an["anomaly*<br/>EWMA detection"]
+        llm["llmtriage*<br/>async LLM triage"]
+    end
+
+    subgraph back["Backends"]
+        direction TB
+        jaeger[("Jaeger<br/>traces")]
+        prom[("Prometheus<br/>metrics")]
+        loki[("Loki<br/>logs")]
+        graf["Grafana"]
+    end
+
+    user --> api --> worker
+    worker --> inv
+    worker --> price
+
+    api -. OTLP .-> recv
+    worker -. OTLP .-> recv
+    inv -. OTLP .-> recv
+    price -. OTLP .-> recv
+
+    recv --> rc --> red --> an --> llm
+
+    llm -- "triage logs" --> loki
+    col -- traces --> jaeger
+    col -- metrics --> prom
+    col -- logs --> loki
+    jaeger --> graf
+    prom --> graf
+    loki --> graf
+
+    classDef custom fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#111;
+    classDef svc fill:#e3f2fd,stroke:#1565c0,color:#111;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,color:#111;
+    class rc,red,an,llm custom;
+    class api,worker,inv,price svc;
+    class jaeger,prom,loki,graf backend;

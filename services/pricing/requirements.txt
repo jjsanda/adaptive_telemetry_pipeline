@@ -1,0 +1,11 @@
+# Runtime dependencies (pinned). Resolved and verified on CPython 3.12.
+# The OpenTelemetry meta-packages pin their own sub-components to matching
+# versions, so these lines lock the whole telemetry tree to one coherent release
+# (SDK 1.43.0 / instrumentation 0.64b0).
+fastapi==0.139.0
+uvicorn[standard]==0.50.0
+pydantic==2.13.4
+opentelemetry-sdk==1.43.0
+opentelemetry-exporter-otlp==1.43.0
+opentelemetry-instrumentation-fastapi==0.64b0
+opentelemetry-instrumentation-logging==0.64b0

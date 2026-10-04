@@ -1,0 +1,14 @@
+version: "2"
+
+linters:
+  enable:
+    - copyloopvar
+    - gocritic
+    - misspell
+    - revive
+    - unconvert
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

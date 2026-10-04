@@ -1,0 +1,24 @@
+flowchart LR
+    A["Trace spans<br/><i>what the app did</i>"]
+    B["1 · redmetrics*<br/>rate · errors · duration"]
+    C["RED metrics<br/><i>how it is performing</i>"]
+    D["2 · anomaly*<br/>EWMA z-score"]
+    E{"is it<br/>abnormal?"}
+    N["normal —<br/>keep watching"]
+    F["3 · llmtriage*<br/>ask an LLM<br/><i>async · non-blocking</i>"]
+    G["Incident log<br/><i>&quot;pricing latency spike —<br/>probable cause, next step&quot;</i>"]
+    H["resourcecost*<br/><i>who owns it · $ estimate</i>"]
+
+    A --> B --> C --> D --> E
+    E -- "yes" --> F --> G
+    E -- "no" --> N
+    H -. "enriches every signal" .-> C
+
+    classDef custom fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#111;
+    classDef data fill:#e3f2fd,stroke:#1565c0,color:#111;
+    classDef ai fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef out fill:#e8f5e9,stroke:#2e7d32,color:#111;
+    class B,D,F,H custom;
+    class A,C,N data;
+    class E ai;
+    class G out;

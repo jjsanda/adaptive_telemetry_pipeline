@@ -1,0 +1,4 @@
+# Grafana auto-loads any dashboard JSON dropped here (see the dashboards
+# provisioning provider). The demo uses Grafana Explore against the provisioned
+# Prometheus/Jaeger/Loki datasources; add dashboards here to have them appear
+# automatically.

@@ -1,0 +1,23 @@
+name: Diagrams
+
+on:
+  pull_request:
+    paths: ["docs/diagrams/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render Mermaid (fail on broken diagram)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # We render every .mmd to prove it is valid, but deliberately do NOT diff
+      # against the committed SVG/PNG: headless-Chromium rendering is not
+      # byte-reproducible across environments, so a strict drift check is flaky.
+      - name: Render diagrams
+        run: bash scripts/render-diagrams.sh

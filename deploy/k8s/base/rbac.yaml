@@ -1,0 +1,47 @@
+# RBAC for the k8sattributesprocessor. Both collectors run under the same
+# ServiceAccount *name* (`adaptive-collector`), but a ServiceAccount is
+# namespaced and our collectors live in two different namespaces, so we create
+# one SA per namespace and bind BOTH to a single cluster-scoped Role.
+#
+# k8sattributes watches pods/namespaces/nodes/replicasets across the cluster to
+# turn a source IP (or a resource attribute) into k8s.* metadata; replicasets
+# are needed to walk pod -> replicaset -> deployment for k8s.deployment.name.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adaptive-collector
+  namespace: observability
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adaptive-collector
+  namespace: apps
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: adaptive-collector-k8sattributes
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: adaptive-collector-k8sattributes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: adaptive-collector-k8sattributes
+subjects:
+  - kind: ServiceAccount
+    name: adaptive-collector
+    namespace: observability
+  - kind: ServiceAccount
+    name: adaptive-collector
+    namespace: apps

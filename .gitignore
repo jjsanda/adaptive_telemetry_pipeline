@@ -1,0 +1,54 @@
+# Build output
+# ocb-generated collector distribution (`make collector`); sources stay tracked
+/collector/_build/
+bin/
+dist/
+*.exe
+# compiled service binaries left by `go build ./...`
+/services/order-api/order-api
+/services/fulfillment-worker/fulfillment-worker
+coverage.out
+coverage.txt
+*.test
+*.prof
+
+# Go
+vendor/
+
+# Node (services/inventory; repo-root install from `make screenshots`)
+node_modules/
+npm-debug.log*
+*.tsbuildinfo
+.eslintcache
+
+# Python (services/pricing)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environment / secrets (.env may live in the repo root or deploy/compose)
+.env
+.env.*
+!.env.example
+*.local
+
+# Local cluster / demo artifacts
+kubeconfig
+*.kubeconfig
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Claude Code workspace metadata
+.claude/
+CLAUDE.local.md

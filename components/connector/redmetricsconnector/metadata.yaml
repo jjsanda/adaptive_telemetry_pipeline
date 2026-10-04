@@ -1,0 +1,16 @@
+type: redmetrics
+
+status:
+  class: connector
+  stability:
+    beta: [traces_to_metrics]
+  distributions: [adaptive-otelcol]
+  codeowners:
+    active: [jjsanda]
+
+# Derives RED (Rate, Errors, Duration) metrics from trace spans, keyed by
+# configurable dimensions:
+#   red.calls            (Sum, cumulative)
+#   red.errors           (Sum, cumulative)
+#   red.duration.ms      (Histogram, cumulative)
+#   red.latency.avg.ms   (Gauge, per-interval — shaped for anomaly detection)

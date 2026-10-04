@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # The collector's `prometheus` exporter exposes all pipeline metrics here,
+  # including the RED metrics from redmetrics and anomaly.* attributes.
+  - job_name: adaptive-otelcol
+    static_configs:
+      - targets: ["collector:8889"]
+
+  # The collector's own internal telemetry (queue sizes, dropped spans, etc.).
+  - job_name: collector-internal
+    static_configs:
+      - targets: ["collector:8888"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

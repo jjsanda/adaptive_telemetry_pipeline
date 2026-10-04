@@ -1,0 +1,13 @@
+.git
+.github
+docs
+load
+deploy/k8s
+**/node_modules
+**/__pycache__
+**/.venv
+**/dist
+**/*.test
+collector/_build
+*.md
+!collector/config

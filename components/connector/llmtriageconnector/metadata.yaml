@@ -1,0 +1,16 @@
+type: llmtriage
+
+status:
+  class: connector
+  stability:
+    alpha: [metrics_to_logs]
+  distributions: [adaptive-otelcol]
+  codeowners:
+    active: [jjsanda]
+
+# Consumes anomaly-flagged metrics and asynchronously asks an LLM (deterministic
+# offline engine by default; optional Anthropic backend) to produce a
+# natural-language triage summary, emitted as a new trace-correlated log record.
+# The consume path only enqueues (non-blocking) — LLM latency never reaches the
+# pipeline. Emits its own health metrics: queue depth/drops, LLM latency/errors,
+# tokens, summaries emitted.

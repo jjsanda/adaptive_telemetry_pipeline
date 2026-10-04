@@ -1,0 +1,24 @@
+# Instrumentation CR — the template the operator reads when it sees an
+# `instrumentation.opentelemetry.io/inject-<lang>` annotation on a pod. It
+# injects an init container that copies the language SDK in, and sets the
+# OTEL_* env (endpoint, propagators, sampler) on the app container.
+#
+# IMPORTANT: this resource must exist in the pod's namespace BEFORE the pod is
+# created — the operator only mutates a pod at admission time. If the pod
+# starts first, injection silently no-ops (see deploy/k8s/README.md).
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: demo-instr
+  namespace: apps
+spec:
+  # Apps export straight to the gateway's OTLP/HTTP receiver. (The DaemonSet
+  # agent above is the alternative path; either works.)
+  exporter:
+    endpoint: http://gateway-collector.observability.svc.cluster.local:4318
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "0.5"

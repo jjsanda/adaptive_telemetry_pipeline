@@ -1,0 +1,17 @@
+# Two namespaces:
+#   observability — the gateway collector + shared telemetry plumbing.
+#   apps          — the demo workloads, the per-node agent, and the
+#                   Instrumentation CR the operator uses for SDK injection.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: adaptive-telemetry-pipeline
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    app.kubernetes.io/part-of: adaptive-telemetry-pipeline

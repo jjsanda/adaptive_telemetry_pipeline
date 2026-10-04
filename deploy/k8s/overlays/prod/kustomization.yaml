@@ -1,0 +1,90 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Production overlay: a horizontally-scaled gateway, real resource limits, and
+# images pinned to immutable tags in a registry (edit `newName`/`newTag` for
+# your registry). imagePullPolicy: IfNotPresent pairs with immutable tags.
+resources:
+  - ../../base
+
+# Pin BOTH images to real, immutable registry tags (replace with yours).
+images:
+  - name: ghcr.io/jjsanda/adaptive-otelcol
+    newName: ghcr.io/jjsanda/adaptive-otelcol
+    newTag: v0.1.0
+  - name: adaptive-pricing
+    newName: ghcr.io/jjsanda/adaptive-pricing
+    newTag: v0.1.0
+
+patches:
+  # Gateway: 2 replicas for HA, production resources, IfNotPresent pulls.
+  - target:
+      group: opentelemetry.io
+      version: v1beta1
+      kind: OpenTelemetryCollector
+      name: gateway
+    patch: |
+      apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
+      metadata:
+        name: gateway
+        namespace: observability
+      spec:
+        replicas: 2
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: "2"
+            memory: 1Gi
+
+  # Agent DaemonSet: production resources, IfNotPresent pulls (one per node).
+  - target:
+      group: opentelemetry.io
+      version: v1beta1
+      kind: OpenTelemetryCollector
+      name: agent
+    patch: |
+      apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
+      metadata:
+        name: agent
+        namespace: apps
+      spec:
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: "1"
+            memory: 512Mi
+
+  # Demo app: production resources, IfNotPresent pulls.
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: pricing
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pricing
+        namespace: apps
+      spec:
+        replicas: 2
+        template:
+          spec:
+            containers:
+              - name: pricing
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+                  limits:
+                    cpu: "1"
+                    memory: 256Mi

@@ -1,0 +1,17 @@
+type: resourcecost
+
+status:
+  class: processor
+  stability:
+    beta: [traces, metrics, logs]
+  distributions: [adaptive-otelcol]
+  codeowners:
+    active: [jjsanda]
+
+# Attaches FinOps/governance resource attributes to all three signals:
+#   telemetry.owner.team    — from a service.name -> team mapping
+#   telemetry.cost.estimate — USD proxy from serialized bytes * cost_per_kb
+tests:
+  config:
+    cost_per_kb: 0.0004
+    default_team: platform

@@ -1,0 +1,16 @@
+type: anomaly
+
+status:
+  class: processor
+  stability:
+    alpha: [metrics]
+  distributions: [adaptive-otelcol]
+  codeowners:
+    active: [jjsanda]
+
+# Streaming EWMA anomaly detection. For every scalar (Gauge / non-monotonic Sum)
+# data point it maintains an O(1) per-series exponentially-weighted mean and
+# variance, computes a z-score, and attaches:
+#   anomaly.score        (double, the z-score)
+#   anomaly.is_anomaly   (bool, |z| > threshold after warmup)
+# Stale series are swept to keep memory O(active series).

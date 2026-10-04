@@ -1,0 +1,152 @@
+# Gateway collector — the full adaptive loop, running as a Deployment.
+#
+#   traces ─► redmetrics (RED) ─► metrics ─► anomaly (EWMA) ─► filter
+#          ─► llmtriage ─► logs/triage ─► debug   (visible in `kubectl logs`)
+#
+# Differences vs collector/config/collector.yaml (the compose config):
+#   * k8sattributes added to the traces & logs pipelines (pod/ns enrichment).
+#   * every backend exporter (jaeger / loki / prometheus) replaced with `debug`
+#     at verbosity: detailed, so the whole loop is observable from pod logs
+#     without standing up Jaeger/Loki/Prometheus in-cluster. The custom
+#     components and connectors are UNCHANGED — the adaptive loop is intact.
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: gateway
+  namespace: observability
+spec:
+  mode: deployment
+  image: ghcr.io/jjsanda/adaptive-otelcol:latest
+  serviceAccount: adaptive-collector
+  # llmtriage defaults to the offline, deterministic backend so the demo needs
+  # no API key. Override to `anthropic` (with ANTHROPIC_API_KEY) for live triage.
+  env:
+    - name: ADAPTIVE_LLM_BACKEND
+      value: deterministic
+  # NOTE: the operator auto-derives the Service ports from the otlp receiver
+  # below, exposing 4317 (grpc) and 4318 (http) on the `gateway-collector`
+  # Service — no explicit `ports:` needed (and duplicating them errors out).
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      memory_limiter:
+        check_interval: 2s
+        limit_percentage: 75
+        spike_limit_percentage: 20
+      batch:
+        send_batch_size: 512
+        timeout: 5s
+
+      # Contrib enrichment: source IP / resource attrs -> k8s.* metadata.
+      k8sattributes:
+        passthrough: false
+        auth_type: serviceAccount
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.node.name
+            - k8s.deployment.name
+        pod_association:
+          - sources:
+              - from: connection
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.name
+              - from: resource_attribute
+                name: k8s.namespace.name
+
+      # YOURS: FinOps/governance enrichment across all three signals.
+      resourcecost:
+        cost_per_kb: 0.0004
+        default_team: platform
+        team_by_service:
+          order-api: payments-team
+          fulfillment-worker: fulfillment-team
+          inventory: fulfillment-team
+          pricing: pricing-team
+
+      # YOURS: streaming EWMA anomaly detection on metric data points.
+      anomaly:
+        alpha: 0.05
+        threshold: 3.0
+        warmup: 8
+        stale_after: 5m
+        sweep_interval: 1m
+
+      # Keep only anomaly-flagged data points for the triage branch.
+      filter/anomalies:
+        error_mode: ignore
+        metrics:
+          datapoint:
+            - 'attributes["anomaly.is_anomaly"] != true'
+
+    connectors:
+      # YOURS: traces -> RED metrics.
+      redmetrics:
+        dimensions: [service.name, span.kind, http.route, status.code]
+        histogram_buckets_ms: [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+        flush_interval: 5s
+
+      # YOURS: anomalous metrics -> async LLM triage -> correlated log records.
+      llmtriage:
+        backend: ${env:ADAPTIVE_LLM_BACKEND:-deterministic}
+        model: ${env:ADAPTIVE_LLM_MODEL:-claude-sonnet-5}
+        api_key: ${env:ANTHROPIC_API_KEY:-}
+        webhook_url: ${env:ADAPTIVE_TRIAGE_WEBHOOK_URL:-}
+        max_batch: 10
+        max_wait: 5s
+        debounce_window: 60s
+
+      # Fan a copy of the scored metrics stream into the triage branch.
+      forward/anomalies: {}
+
+    exporters:
+      # detailed so the triage log record is fully rendered in `kubectl logs`.
+      debug:
+        verbosity: detailed
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    service:
+      extensions: [health_check, zpages]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, resourcecost, batch]
+          exporters: [debug, redmetrics]
+
+        metrics:
+          receivers: [otlp, redmetrics]
+          processors: [memory_limiter, resourcecost, anomaly, batch]
+          exporters: [debug, forward/anomalies]
+
+        metrics/triage:
+          receivers: [forward/anomalies]
+          processors: [filter/anomalies]
+          exporters: [llmtriage]
+
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, resourcecost, batch]
+          exporters: [debug]
+
+        logs/triage:
+          receivers: [llmtriage]
+          processors: [batch]
+          exporters: [debug]

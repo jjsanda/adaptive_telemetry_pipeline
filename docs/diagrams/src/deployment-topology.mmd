@@ -1,0 +1,29 @@
+flowchart TB
+    subgraph cluster["Kubernetes cluster (kind)"]
+        direction TB
+        subgraph obs["namespace: observability"]
+            cm["cert-manager"]
+            op["OpenTelemetry<br/>Operator"]
+            gw["adaptive-otelcol<br/>gateway · Deployment"]
+        end
+        subgraph apps["namespace: apps"]
+            agent["adaptive-otelcol<br/>agent · DaemonSet"]
+            pod["app pod<br/>+ injected SDK"]
+        end
+    end
+    backends[("Jaeger · Prometheus · Loki")]
+
+    cm -. "TLS certs" .-> op
+    op -. "manages (CRD)" .-> gw
+    op -. "manages (CRD)" .-> agent
+    op -. "injects auto-instrumentation" .-> pod
+    pod -- OTLP --> agent
+    agent -- OTLP --> gw
+    gw --> backends
+
+    classDef custom fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#111;
+    classDef op fill:#f3e5f5,stroke:#6a1b9a,color:#111;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,color:#111;
+    class gw,agent custom;
+    class op,cm op;
+    class backends backend;
