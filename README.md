@@ -255,4 +255,4 @@ Built as a self-directed portfolio project. See [`docs/ai-workflow-log.md`](docs
 
 ## License
 
-[Apache-2.0](LICENSE) © 2026 Josef Švanda
+[Apache-2.0](LICENSE) © 2026 Josef Šanda
